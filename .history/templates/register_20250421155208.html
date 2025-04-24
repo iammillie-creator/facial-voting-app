@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <h2 class="mb-4">Register</h2>
+        
+        <form method="POST" enctype="multipart/form-data" id="registrationForm">
+            <div class="mb-3">
+                <label for="name" class="form-label">Full Name</label>
+                <input type="text" class="form-control" id="name" name="name" required>
+            </div>
+            
+            <div class="mb-3">
+                <label for="email" class="form-label">Email</label>
+                <input type="email" class="form-control" id="email" name="email" required>
+            </div>
+            
+            <div class="mb-3">
+                <label for="user_id" class="form-label">User ID</label>
+                <input type="text" class="form-control" id="user_id" name="user_id" required>
+            </div>
+            
+            <div class="mb-3">
+                <label for="password" class="form-label">Password</label>
+                <input type="password" class="form-control" id="password" name="password" required>
+            </div>
+            
+            <div class="mb-3">
+                <label class="form-label">Face Capture</label>
+                <div class="video-container mb-2">
+                    <video id="video" width="320" height="240" autoplay></video>
+                    <canvas id="canvas" width="320" height="240" style="display:none;"></canvas>
+                </div>
+                <button type="button" id="capture" class="btn btn-secondary">Capture Face</button>
+                <input type="hidden" id="face_image_data" name="face_image_data">
+                
+                <div id="facePreview" class="mt-2" style="display: none;">
+                    <img id="previewImage" src="#" alt="Face Preview" class="img-thumbnail" style="max-width: 200px;">
+                    <button type="button" id="retake" class="btn btn-sm btn-warning mt-2">Retake</button>
+                </div>
+                <div class="form-text">Please ensure your face is clearly visible and well-lit</div>
+            </div>
+            
+            <button type="submit" class="btn btn-primary" id="submitBtn" disabled>Register</button>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Access camera
+    const video = document.getElementById('video');
+    const canvas = document.getElementById('canvas');
+    const captureBtn = document.getElementById('capture');
+    const retakeBtn = document.getElementById('retake');
+    const faceInput = document.getElementById('face_image_data');
+    const previewDiv = document.getElementById('facePreview');
+    const previewImg = document.getElementById('previewImage');
+    const submitBtn = document.getElementById('submitBtn');
+    
+    let stream = null;
+    
+    // Start camera
+    function startCamera() {
+        navigator.mediaDevices.getUserMedia({ video: true, audio: false })
+            .then(s => {
+                stream = s;
+                video.srcObject = stream;
+            })
+            .catch(err => {
+                console.error("Error accessing camera:", err);
+                alert("Could not access camera. Please ensure you've granted camera permissions.");
+            });
+    }
+    
+    // Capture image
+    captureBtn.addEventListener('click', () => {
+        canvas.getContext('2d').drawImage(video, 0, 0, 320, 240);
+        const imageData = canvas.toDataURL('image/jpeg');
+        faceInput.value = imageData;
+        previewImg.src = imageData;
+        previewDiv.style.display = 'block';
+        captureBtn.style.display = 'none';
+        submitBtn.disabled = false;
+    });
+    
+    // Retake image
+    retakeBtn.addEventListener('click', () => {
+        faceInput.value = '';
+        previewDiv.style.display = 'none';
+        captureBtn.style.display = 'block';
+        submitBtn.disabled = true;
+    });
+    
+    // Stop camera when leaving page
+    window.addEventListener('beforeunload', () => {
+        if (stream) {
+            stream.getTracks().forEach(track => track.stop());
+        }
+    });
+    
+    // Initialize camera
+    startCamera();
+</script>
+{% endblock %}

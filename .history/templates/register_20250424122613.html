@@ -1,0 +1,142 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <h2 class="mb-4">Register</h2>
+        
+        <form method="POST" enctype="multipart/form-data" id="registrationForm" onsubmit="prepareForm()">
+            <div class="mb-3">
+                <label for="name" class="form-label">Full Name</label>
+                <input type="text" class="form-control" id="name" name="name" required>
+            </div>
+            
+            <div class="mb-3">
+                <label for="email" class="form-label">Email</label>
+                <input type="email" class="form-control" id="email" name="email" required>
+            </div>
+            
+            <div class="mb-3">
+                <label for="user_id" class="form-label">User ID</label>
+                <input type="text" class="form-control" id="user_id" name="user_id" required>
+            </div>
+            
+            <div class="mb-3">
+                <label for="password" class="form-label">Password</label>
+                <input type="password" class="form-control" id="password" name="password" required>
+            
+            <div class="mb-3">
+                <label class="form-label">Face Capture</label>
+                <div class="video-container">
+                    <video id="video" width="320" height="240" autoplay></video>
+                    <canvas id="canvas" width="320" height="240" style="display:none;"></canvas>
+                </div>
+                <button type="button" id="captureBtn" class="btn btn-secondary mt-2">Capture Face</button>
+                <input type="hidden" id="faceImageData" name="face_image">
+                
+                <div id="previewContainer" class="mt-2" style="display:none;">
+                    <img id="previewImage" src="#" alt="Face Preview" class="img-thumbnail" style="max-width: 200px;">
+                    <button type="button" id="retakeBtn" class="btn btn-sm btn-warning mt-2">Retake</button>
+                </div>
+            </div>
+            
+            <button type="submit" class="btn btn-primary" id="submitBtn" disabled>Register</button>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const video = document.getElementById('video');
+    const canvas = document.getElementById('canvas');
+    const preview = document.getElementById('preview');
+    const captureBtn = document.getElementById('captureBtn');
+    const retakeBtn = document.getElementById('retakeBtn');
+    const faceImageData = document.getElementById('faceImageData');
+    const submitBtn = document.getElementById('submitBtn');
+    const form = document.getElementById('registerForm');
+    const imageData = canvas.toDataURL('image/png');
+    
+    let stream = null;
+
+    // Start camera
+    //function startCamera() {
+        navigator.mediaDevices.getUserMedia({ video: true })
+            .then(function(s) {
+                stream = s;
+                video.srcObject = stream;
+            })
+            .catch(function(err) {
+                console.error("Camera error:", err);
+                alert("Could not access camera. Please enable camera permissions.");
+            });
+    }
+
+    // Capture image
+    captureBtn.addEventListener('click', function() {
+        // Pause video
+        video.pause();
+        
+        // Draw video frame to canvas
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        
+        // Convert canvas to data URL
+        const imageData = canvas.toDataURL('image/jpeg');
+        faceImageData.value = imageData;
+        
+        // Show preview
+        previewImage.src = imageData;
+        previewContainer.style.display = 'block';
+        captureBtn.style.display = 'none';
+        
+        // Enable submit button
+        submitBtn.disabled = false;
+        if (faceImageData.value) {
+            // Convert base64 to blob
+            const blob = await fetch(faceImageData.value).then(r => r.blob());
+            formData.append('face_image', blob, 'face.jpg');
+        }
+    
+        // Send to server
+        try {
+            const response = await fetch('/register', {
+                method: 'POST',
+                body: formData  // Let browser set Content-Type automatically
+            });
+            
+            if (response.redirected) {
+                window.location.href = response.url;
+            } else {
+                const result = await response.json();
+                alert(result.message || 'Registration failed');
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            alert('Registration failed');
+        }
+    });
+        // Stop camera
+        if (stream) {
+            stream.getTracks().forEach(track => track.stop());
+        }
+    });
+
+    // Retake image
+    retakeBtn.addEventListener('click', function() {
+        faceImageData.value = '';
+        previewContainer.style.display = 'none';
+        captureBtn.style.display = 'block';
+        submitBtn.disabled = true;
+        startCamera();
+    });
+
+    // Start camera when page loads
+    startCamera();
+});////
+</script>
+{% endblock %}
