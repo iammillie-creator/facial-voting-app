@@ -11,7 +11,7 @@
                 {% for candidate in candidates %}
                 <div class="col">
                     <div class="card h-100">
-                        <img src="{{ url_for('static', filename=candidate.image) }}" class="card-img-top" alt="{{ candidate.name }}">
+                        <img src="{{ url_for('static', filename=candidate_images) }}" class="card-img-top" alt="{{ candidate.name }}">
                         <div class="card-body">
                             <h5 class="card-title">{{ candidate.name }}</h5>
                             <p class="card-text">{{ candidate.party }}</p>
