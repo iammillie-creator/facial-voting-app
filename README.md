@@ -37,7 +37,7 @@ cd facial-voting-app
 
 python -m venv venv
 venv\Scripts\activate # on windows
-# or source venv/bin/activate # on linux/macOS
+or source venv/bin/activate # on linux/macOS
 
 ### 3. Install dependencies
 
