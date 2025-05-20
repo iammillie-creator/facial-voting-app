@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container mt-5">
+    <h2>Voting Results</h2>
+    <p>Total Votes Cast: <strong>{{ total_votes }}</strong></p>
+
+    {% if leader %}
+        <div class="alert alert-success">
+            <h4>Leading Candidate: {{ leader.name }} ({{ leader.party }})</h4>
+            <p>Votes: {{ leader.votes }}</p>
+        </div>
+    {% endif %}
+
+    <h4>All Candidates:</h4>
+    <ul class="list-group mt-3">
+        {% for candidate in candidates %}
+        <li class="list-group-item d-flex justify-content-between align-items-center">
+            {{ candidate.name }} ({{ candidate.party }})
+            <span class="badge bg-primary rounded-pill">{{ candidate.votes }}</span>
+        </li>
+        {% endfor %}
+    </ul>
+</div>
+{% endblock %}

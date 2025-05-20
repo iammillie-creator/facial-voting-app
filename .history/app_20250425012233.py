@@ -297,38 +297,55 @@ def vote():
         flash('Invalid candidate selection', 'danger')
         return redirect(url_for('dashboard'))
 
-    # Record the vote
-    mongo.db.votes.insert_one({
-        'user_id': session['user_id'],
-        'candidate_id': candidate_id,
-        'voted_at': datetime.utcnow()
-    })
+    try:
+        # Save the vote record (optional, for tracking)
+        mongo.db.votes.insert_one({
+            'user_id': session['user_id'],
+            'candidate_id': candidate_id,
+            'voted_at': datetime.utcnow()
+        })
 
-    # Update user status
-    mongo.db.users.update_one(
-        {'user_id': session['user_id']},
-        {'$set': {'has_voted': True}}
-    )
-    session['has_voted'] = True
+        # Increment the vote count for the selected candidate
+        result = mongo.db.candidates.update_one(
+            {'_id': ObjectId(candidate_id)},
+            {'$inc': {'votes': 1}}
+        )
 
-    from bson import ObjectId
-    mongo.db.candidates.update_one(
-        {'_id': ObjectId(candidate_id)},
-        {'$inc': {'votes': 1}}
-    )
+        if result.modified_count == 0:
+            flash('Failed to record vote in candidates collection', 'danger')
+            return redirect(url_for('dashboard'))
 
-    flash('Vote recorded successfully!', 'success')
-    return redirect(url_for('dashboard'))
+        # Mark user as voted
+        mongo.db.users.update_one(
+            {'user_id': session['user_id']},
+            {'$set': {'has_voted': True}}
+        )
+        session['has_voted'] = True
+
+        flash('Vote recorded successfully!', 'success')
+        return redirect(url_for('dashboard'))
+
+    except Exception as e:
+        print(f"[ERROR] Voting failed: {e}")
+        flash('An error occurred while processing your vote.', 'danger')
+        return redirect(url_for('dashboard'))
 
 @app.route('/results')
 def results():
-    candidates = list(mongo.db.candidates.find({}))
-    total_votes = sum(candidate.get('votes', 0) for candidate in candidates)
+    candidates = list(mongo.db.candidates.find())
 
-    # Find leading candidate
-    leading_candidate = max(candidates, key=lambda c: c.get('votes', 0)) if candidates else None
+    if not candidates:
+        flash("No candidates found.", "warning")
+        return redirect(url_for('dashboard'))
 
-    return render_template('results.html', candidates=candidates, total_votes=total_votes, leader=leading_candidate)
+    # Find the highest vote count
+    max_votes = max(candidate.get('votes', 0) for candidate in candidates)
+
+    # Tag the leading candidate(s)
+    for candidate in candidates:
+        candidate['is_leading'] = candidate.get('votes', 0) == max_votes
+
+    return render_template('results.html', candidates=candidates)
 
 
 @app.route('/logout')

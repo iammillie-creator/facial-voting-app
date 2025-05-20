@@ -311,6 +311,7 @@ def vote():
     )
     session['has_voted'] = True
 
+
     from bson import ObjectId
     mongo.db.candidates.update_one(
         {'_id': ObjectId(candidate_id)},

@@ -281,6 +281,7 @@ def dashboard():
         return render_template('already_voted.html')
 
     candidates = list(mongo.db.candidates.find({}))
+
     return render_template('dashboard.html', candidates=candidates)
 
 @app.route('/vote', methods=['POST'])

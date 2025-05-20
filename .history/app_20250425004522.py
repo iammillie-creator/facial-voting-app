@@ -13,7 +13,6 @@ import face_recognition
 import base64
 from io import BytesIO
 from PIL import Image
-from bson.objectid import ObjectId
 from email_validator import validate_email, EmailNotValidError
 from dotenv import load_dotenv
 
@@ -297,38 +296,16 @@ def vote():
         flash('Invalid candidate selection', 'danger')
         return redirect(url_for('dashboard'))
 
-    # Record the vote
     mongo.db.votes.insert_one({
         'user_id': session['user_id'],
         'candidate_id': candidate_id,
         'voted_at': datetime.utcnow()
     })
 
-    # Update user status
-    mongo.db.users.update_one(
-        {'user_id': session['user_id']},
-        {'$set': {'has_voted': True}}
-    )
+    mongo.db.users.update_one({'user_id': session['user_id']}, {'$set': {'has_voted': True}})
     session['has_voted'] = True
-
-    from bson import ObjectId
-    mongo.db.candidates.update_one(
-        {'_id': ObjectId(candidate_id)},
-        {'$inc': {'votes': 1}}
-    )
-
     flash('Vote recorded successfully!', 'success')
     return redirect(url_for('dashboard'))
-
-@app.route('/results')
-def results():
-    candidates = list(mongo.db.candidates.find({}))
-    total_votes = sum(candidate.get('votes', 0) for candidate in candidates)
-
-    # Find leading candidate
-    leading_candidate = max(candidates, key=lambda c: c.get('votes', 0)) if candidates else None
-
-    return render_template('results.html', candidates=candidates, total_votes=total_votes, leader=leading_candidate)
 
 
 @app.route('/logout')

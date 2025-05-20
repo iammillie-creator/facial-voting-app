@@ -13,7 +13,6 @@ import face_recognition
 import base64
 from io import BytesIO
 from PIL import Image
-from bson.objectid import ObjectId
 from email_validator import validate_email, EmailNotValidError
 from dotenv import load_dotenv
 
@@ -59,11 +58,7 @@ def send_otp_email(receiver_email, otp):
         print("Email send failed:", e)
         return False
 
-def decode_base64_image(data_url):
-    header, encoded = data_url.split(",", 1)
-    binary_data = base64.b64decode(encoded)
-    img = Image.open(BytesIO(binary_data)).convert('RGB')
-    return np.array(img)
+
 
 def verify_face(uploaded_image, stored_encoding, tolerance=0.6):
     try:
@@ -100,27 +95,6 @@ def verify_face(uploaded_image, stored_encoding, tolerance=0.6):
     except Exception as e:
         print(f"[EXCEPTION] Face verification error: {e}")
         return False, "Verification process failed"
-    
-def verify_face_from_array(img_array, stored_encoding, tolerance=0.6):
-    try:
-        face_locations = face_recognition.face_locations(img_array)
-        print(f"[DEBUG] Detected {len(face_locations)} face(s) in login image.")
-
-        if len(face_locations) != 1:
-            return False, "Ensure only one face is clearly visible"
-
-        face_encodings = face_recognition.face_encodings(img_array, face_locations)
-        if not face_encodings:
-            return False, "No encodings found"
-
-        stored_encoding = np.array(stored_encoding)
-        match = face_recognition.compare_faces([stored_encoding], face_encodings[0], tolerance)
-        print(f"[DEBUG] Match result: {match}")
-        return (match[0], None if match[0] else "Face does not match")
-
-    except Exception as e:
-        print(f"[EXCEPTION] Face verification error: {e}")
-        return False, "Verification failed"
 
 
 @app.route('/')
@@ -235,7 +209,7 @@ def login():
     if request.method == 'POST':
         user_id = request.form.get('user_id')
         password = request.form.get('password')
-        face_data_url = request.form.get('face_image_data')  # Corrected line
+        face_image = request.files.get('face_image')
 
         user = mongo.db.users.find_one({'user_id': user_id})
         if not user or not check_password_hash(user['password'], password):
@@ -246,20 +220,11 @@ def login():
             flash('Please verify your email', 'danger')
             return redirect(url_for('login'))
 
-        if not face_data_url:
-            flash('Face image is required', 'danger')
+        if not face_image:
+            flash('Please upload your face image', 'danger')
             return redirect(url_for('login'))
 
-        # Convert base64 image to numpy array
-        try:
-            img_np = decode_base64_image(face_data_url)  # Assuming this helper exists
-        except Exception as e:
-            print(f"[ERROR] Failed to decode face image: {e}")
-            flash('Failed to process face image', 'danger')
-            return redirect(url_for('login'))
-
-        # Verify face
-        result, error = verify_face_from_array(img_np, user['face_encoding'])  # Assuming this helper exists
+        result, error = verify_face(face_image, user['face_encoding'])
         if not result:
             flash(f'Face verification failed: {error}', 'danger')
             return redirect(url_for('login'))
@@ -297,39 +262,16 @@ def vote():
         flash('Invalid candidate selection', 'danger')
         return redirect(url_for('dashboard'))
 
-    # Record the vote
     mongo.db.votes.insert_one({
         'user_id': session['user_id'],
         'candidate_id': candidate_id,
         'voted_at': datetime.utcnow()
     })
 
-    # Update user status
-    mongo.db.users.update_one(
-        {'user_id': session['user_id']},
-        {'$set': {'has_voted': True}}
-    )
+    mongo.db.users.update_one({'user_id': session['user_id']}, {'$set': {'has_voted': True}})
     session['has_voted'] = True
-
-    from bson import ObjectId
-    mongo.db.candidates.update_one(
-        {'_id': ObjectId(candidate_id)},
-        {'$inc': {'votes': 1}}
-    )
-
     flash('Vote recorded successfully!', 'success')
     return redirect(url_for('dashboard'))
-
-@app.route('/results')
-def results():
-    candidates = list(mongo.db.candidates.find({}))
-    total_votes = sum(candidate.get('votes', 0) for candidate in candidates)
-
-    # Find leading candidate
-    leading_candidate = max(candidates, key=lambda c: c.get('votes', 0)) if candidates else None
-
-    return render_template('results.html', candidates=candidates, total_votes=total_votes, leader=leading_candidate)
-
 
 @app.route('/logout')
 def logout():

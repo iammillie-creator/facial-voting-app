@@ -1,0 +1,8 @@
+Flask
+Flask-PyMongo
+email-validator
+face-recognition
+opencv-python
+Pillow
+python-dotenv
+Werkzeug

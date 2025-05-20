@@ -271,15 +271,6 @@ def login():
         return redirect(url_for('dashboard'))
 
     return render_template('login.html')
-
-@app.route('/dashboard')
-def dashboard():
-    if 'user_id' not in session:
-        return redirect(url_for('login'))
-
-    if session.get('has_voted'):
-        return render_template('already_voted.html')
-
     candidates = list(mongo.db.candidates.find({}))
     return render_template('dashboard.html', candidates=candidates)
 

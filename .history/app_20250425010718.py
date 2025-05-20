@@ -13,7 +13,7 @@ import face_recognition
 import base64
 from io import BytesIO
 from PIL import Image
-from bson.objectid import ObjectId
+
 from email_validator import validate_email, EmailNotValidError
 from dotenv import load_dotenv
 
@@ -297,28 +297,38 @@ def vote():
         flash('Invalid candidate selection', 'danger')
         return redirect(url_for('dashboard'))
 
-    # Record the vote
-    mongo.db.votes.insert_one({
-        'user_id': session['user_id'],
-        'candidate_id': candidate_id,
-        'voted_at': datetime.utcnow()
-    })
+    try:
+        # Save the vote record (optional, for tracking)
+        mongo.db.votes.insert_one({
+            'user_id': session['user_id'],
+            'candidate_id': candidate_id,
+            'voted_at': datetime.utcnow()
+        })
 
-    # Update user status
-    mongo.db.users.update_one(
-        {'user_id': session['user_id']},
-        {'$set': {'has_voted': True}}
-    )
-    session['has_voted'] = True
+        # Increment the vote count for the selected candidate
+        result = mongo.db.candidates.update_one(
+            {'_id': ObjectId(candidate_id)},
+            {'$inc': {'votes': 1}}
+        )
 
-    from bson import ObjectId
-    mongo.db.candidates.update_one(
-        {'_id': ObjectId(candidate_id)},
-        {'$inc': {'votes': 1}}
-    )
+        if result.modified_count == 0:
+            flash('Failed to record vote in candidates collection', 'danger')
+            return redirect(url_for('dashboard'))
 
-    flash('Vote recorded successfully!', 'success')
-    return redirect(url_for('dashboard'))
+        # Mark user as voted
+        mongo.db.users.update_one(
+            {'user_id': session['user_id']},
+            {'$set': {'has_voted': True}}
+        )
+        session['has_voted'] = True
+
+        flash('Vote recorded successfully!', 'success')
+        return redirect(url_for('dashboard'))
+
+    except Exception as e:
+        print(f"[ERROR] Voting failed: {e}")
+        flash('An error occurred while processing your vote.', 'danger')
+        return redirect(url_for('dashboard'))
 
 @app.route('/results')
 def results():

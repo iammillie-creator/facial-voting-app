@@ -281,6 +281,10 @@ def dashboard():
         return render_template('already_voted.html')
 
     candidates = list(mongo.db.candidates.find({}))
+    for candidate in candidates:
+        if not candidate['image'].startswith('images/candidate_images/'):
+            candidate['image'] = f"images/candidate_images/{candidate['image']}"
+
     return render_template('dashboard.html', candidates=candidates)
 
 @app.route('/vote', methods=['POST'])

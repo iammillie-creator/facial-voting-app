@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2 class="mb-4">Election Results</h2>
+    
+    <div class="row row-cols-1 row-cols-md-3 g-4">
+        {% for candidate in candidates %}
+        <div class="col">
+            <div class="card h-100 {% if candidate.is_leading %}border-success{% endif %}">
+                <img src="{{ url_for('static', filename=candidate.image) }}" class="card-img-top" alt="{{ candidate.name }}" style="max-height: 150px; max_width:150px; object-fit: cover; border_radius:50%">
+                <div class="card-body">
+                    <h5 class="card-title">{{ candidate.name }}</h5>
+                    <p class="card-text">{{ candidate.party }}</p>
+                    <p class="card-text fw-bold">Votes: {{ candidate.votes }}</p>
+                    {% if candidate.is_leading %}
+                        <span class="badge bg-success">Leading</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

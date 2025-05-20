@@ -311,6 +311,7 @@ def vote():
     )
     session['has_voted'] = True
 
+    # ✅ Increment the vote count for the candidate
     from bson import ObjectId
     mongo.db.candidates.update_one(
         {'_id': ObjectId(candidate_id)},
@@ -322,14 +323,20 @@ def vote():
 
 @app.route('/results')
 def results():
-    candidates = list(mongo.db.candidates.find({}))
-    total_votes = sum(candidate.get('votes', 0) for candidate in candidates)
+    candidates = list(mongo.db.candidates.find())
 
-    # Find leading candidate
-    leading_candidate = max(candidates, key=lambda c: c.get('votes', 0)) if candidates else None
+    if not candidates:
+        flash("No candidates found.", "warning")
+        return redirect(url_for('dashboard'))
 
-    return render_template('results.html', candidates=candidates, total_votes=total_votes, leader=leading_candidate)
+    # Find the highest vote count
+    max_votes = max(candidate.get('votes', 0) for candidate in candidates)
 
+    # Tag the leading candidate(s)
+    for candidate in candidates:
+        candidate['is_leading'] = candidate.get('votes', 0) == max_votes
+
+    return render_template('results.html', candidates=candidates)
 
 @app.route('/logout')
 def logout():
