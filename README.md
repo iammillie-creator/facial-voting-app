@@ -3,7 +3,7 @@
 A secure, web-based voting platform built with Flask, MongoDB, and facial recognition. It authenticates users using webcam-captured images and enforces a one-person-one-vote rule with real-time OTP verification and encryption.
 
 ---preview---
-![Image](https://github.com/user-attachments/assets/b257fb63-d755-42e7-8755-c12c9dbe4228)
+![Image](https://github.com/user-attachments/assets/0fc7144b-e61b-4c8c-b499-5c9ecb27ec7a)
 
 ## 🚀 Features
 
